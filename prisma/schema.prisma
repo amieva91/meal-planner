@@ -1,0 +1,83 @@
+// Este es tu archivo de esquema de Prisma.
+// Aprende más sobre él en la documentación: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- MODELOS DE LA APLICACIÓN ---
+
+model Hogar {
+  id                      String    @id @default(uuid())
+  nombre                  String
+  fecha_creacion          DateTime  @default(now())
+  pin_lista_compra        String?   @db.Char(4)
+  configuracion_desayunos String    @default("uniforme") // Simplificado a String por ahora
+
+  // Relaciones
+  miembros Miembro[]
+  platos   Plato[]
+}
+
+model Miembro {
+  id                      String  @id @default(uuid())
+  hogar_id                String
+  nombre                  String
+  fecha_nacimiento        String // Se guarda como texto, la lógica de edad está en la app
+  sexo                    String
+  peso                    Float
+  altura                  Int
+  trabajo_tipo            String
+  horas_cardio_semanal    Float   @default(0)
+  horas_fuerza_semanal    Float   @default(0)
+  horas_deportes_semanal  Float   @default(0)
+  horas_moderado_semanal  Float   @default(0)
+
+  // Relaciones
+  hogar Hogar @relation(fields: [hogar_id], references: [id], onDelete: Cascade)
+}
+
+model Ingrediente {
+  id                 String  @id @default(uuid())
+  nombre             String  @unique
+  grupo_alimentario  String
+  kcal_100g          Float
+  proteinas_100g     Float
+  carbohidratos_100g Float
+  grasas_100g        Float
+
+  // Relaciones
+  platos Plato_Ingrediente[]
+}
+
+model Plato {
+  id          String   @id @default(uuid())
+  hogar_id    String
+  nombre      String
+  tipo_plato  String   @default("flex")
+  tipo_comida String
+
+  // Relaciones
+  hogar       Hogar               @relation(fields: [hogar_id], references: [id], onDelete: Cascade)
+  ingredientes Plato_Ingrediente[]
+}
+
+// Modelo para la tabla de unión (muchos a muchos) entre Plato e Ingrediente
+model Plato_Ingrediente {
+  plato_id       String
+  ingrediente_id String
+  cantidad_base  Float
+  unidad_medida  String
+
+  // Relaciones
+  plato       Plato       @relation(fields: [plato_id], references: [id], onDelete: Cascade)
+  ingrediente Ingrediente @relation(fields: [ingrediente_id], references: [id], onDelete: Cascade)
+
+  // Clave primaria compuesta para que un ingrediente no se repita en el mismo plato
+  @@id([plato_id, ingrediente_id])
+}
